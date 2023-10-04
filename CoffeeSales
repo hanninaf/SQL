@@ -1,0 +1,53 @@
+/*coffe_chain data set from: https://www.kaggle.com/datasets/amruthayenikonda/coffee-chain-sales-dataset*/
+
+/*
+We first create two common table expressions (CTEs): MonthlySales and YearlySales.
+
+The MonthlySales CTE calculates the total monthly sales for each product category for the years 2016 and 2017.
+
+The YearlySales CTE calculates the total annual sales for each product category separately for 2016 and 2017.
+
+Finally, we join these CTEs and calculate the sales growth percentage for each product category on a monthly basis by comparing 2017 sales to 2016 sales. The results are rounded to two decimal places and ordered by month and product category.
+
+This query provides insights into how the sales of different product categories have grown or declined on a monthly basis between 2016 and 2017.
+*/
+
+WITH MonthlySales AS (
+    SELECT
+        EXTRACT(MONTH FROM Date) AS SalesMonth,
+        Product_Category,
+        SUM(Sales) AS TotalSales
+    FROM
+        coffee_chain
+    WHERE
+        EXTRACT(YEAR FROM Date) IN (2016, 2017)
+    GROUP BY
+        EXTRACT(MONTH FROM Date),
+        Product_Category
+),
+YearlySales AS (
+    SELECT
+        Product_Category,
+        SUM(CASE WHEN EXTRACT(YEAR FROM Date) = 2016 THEN Sales ELSE 0 END) AS Sales2016,
+        SUM(CASE WHEN EXTRACT(YEAR FROM Date) = 2017 THEN Sales ELSE 0 END) AS Sales2017
+    FROM
+        coffee_chain
+    WHERE
+        EXTRACT(YEAR FROM Date) IN (2016, 2017)
+    GROUP BY
+        Product_Category
+)
+SELECT
+    ms.SalesMonth,
+    ms.Product_Category,
+    ROUND((ms.TotalSales - ys.Sales2016) / ys.Sales2016 * 100, 2) AS SalesGrowthPercentage
+FROM
+    MonthlySales ms
+JOIN
+    YearlySales ys
+ON
+    ms.Product_Category = ys.Product_Category
+WHERE
+    ms.SalesMonth IS NOT NULL
+ORDER BY
+    ms.SalesMonth, ms.Product_Category;
